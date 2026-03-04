@@ -1,375 +1,506 @@
-<a href="https://docs.databricks.com/aws/en/generative-ai/agent-framework/chat-app">
-  <h1 align="center">Databricks Agent Chat Template</h1>
-</a>
+# Equity Analyst App
 
 <p align="center">
-    A chat application template for interacting with Databricks Agent Serving endpoints, built with ExpressJS, React, Vercel AI SDK, Databricks authentication, and optional Lakebase (database) integration.
+  <strong>AI-Powered Stock Research & Market Intelligence Platform</strong>
+</p>
+
+<p align="center">
+  Built on Databricks | Real-time Sentiment Analysis | Live Market Data
 </p>
 
 <p align="center">
   <a href="#features"><strong>Features</strong></a> ·
-  <a href="#running-locally"><strong>Running Locally</strong></a> ·
-  <a href="#deployment"><strong>Deployment</strong></a>
+  <a href="#architecture"><strong>Architecture</strong></a> ·
+  <a href="#getting-started"><strong>Getting Started</strong></a> ·
+  <a href="#deployment"><strong>Deployment</strong></a> ·
+  <a href="#codebase-guide"><strong>Codebase Guide</strong></a>
 </p>
-<br/>
 
-This template provides a fully functional chat app for custom code agents and Agent Bricks deployed on Databricks,
-but has some [known limitations](#known-limitations) for other use cases. Work is in progress on addressing these limitations.
+---
+
+## Overview
+
+The Equity Analyst App is a full-stack application that provides AI-powered equity research capabilities. It combines real-time news sentiment analysis, market data, and conversational AI to help users make informed investment decisions.
 
 ## Features
 
-- **Databricks Agent and Foundation Model Integration**: Direct connection to Databricks Agent serving endpoints and Agent Bricks
-- **Databricks Authentication**: Uses Databricks authentication to identify end users of the chat app and securely manage their conversations.
-- **Persistent Chat History (Optional)**: Leverages Databricks Lakebase (Postgres) for storing conversations, with governance and tight lakehouse integration. Can also run in ephemeral mode without database.
+- **News Sentiment Analysis**: AI-powered analysis of financial news headlines with bullish/bearish/neutral classification
+- **Real-time Market Indices**: Live tracking of S&P 500, NASDAQ, DOW, and VIX
+- **Stock Fundamentals On-Demand**: P/E ratio, EPS, market cap, revenue, and earnings data
+- **Resizable Panels**: Customizable workspace with draggable Chat and Genie panels
+- **Conversational AI**: Chat interface powered by Databricks Agent Serving
+- **Genie Analytics**: Natural language queries for equity research intelligence
+- **Sector Impact Analysis**: Aggregated sentiment across market sectors
+- **TradingView Integration**: Interactive stock charts
+- **Persistent Chat History**: Optional database-backed conversation storage
 
-## Prerequisites
+---
 
-1. **Databricks serving endpoint**: you need access to a Databricks workspace containing the Agent Bricks or custom agent serving endpoint to chat with.
-2. **Set up Databricks authentication**
-   - Install the latest version of the [Databricks CLI](https://docs.databricks.com/en/dev-tools/cli/install.html). On macOS, do this via:
-   ```bash
-   brew install databricks
-   brew upgrade databricks && databricks -v
-   ```
-   - Run the following to configure authentication.
-     In the snippet below, `DATABRICKS_CONFIG_PROFILE` is the name of the Databricks CLI profile under which to configure
-     authentication. If desired, you can update this to a name of your choice, e.g. `dev_workspace`.
-   ```bash
-     export DATABRICKS_CONFIG_PROFILE='chatbot_template'
-     databricks auth login --profile "$DATABRICKS_CONFIG_PROFILE"
-   ```
+## Architecture
+
+### High-Level System Architecture
+
+```mermaid
+flowchart TB
+    subgraph Client ["Frontend (React + Vite)"]
+        UI[User Interface]
+        Chat[Chat Panel]
+        Genie[Genie Panel]
+        News[News Feed]
+        Charts[TradingView Charts]
+    end
+
+    subgraph Server ["Backend (Express.js)"]
+        API[REST API Routes]
+        Auth[Auth Middleware]
+        Stream[Stream Handler]
+    end
+
+    subgraph External ["External Services"]
+        DBS[Databricks Agent Serving]
+        DBG[Databricks Genie]
+        FH[Finnhub API]
+        RSS[RSS News Feeds]
+    end
+
+    subgraph Storage ["Data Layer"]
+        LB[(Lakebase PostgreSQL)]
+    end
+
+    UI --> API
+    Chat --> Stream
+    Genie --> DBG
+    News --> FH
+    News --> RSS
+
+    API --> Auth
+    Auth --> DBS
+    Stream --> DBS
+    API --> LB
+```
+
+### Request Flow Architecture
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as React Client
+    participant S as Express Server
+    participant D as Databricks Agent
+    participant F as Finnhub API
+    participant DB as Lakebase
+
+    Note over U,DB: Chat Flow
+    U->>C: Send message
+    C->>S: POST /api/chat
+    S->>D: Stream request
+    D-->>S: SSE stream
+    S-->>C: Forward stream
+    C-->>U: Display response
+    S->>DB: Save message
+
+    Note over U,F: Sentiment Analysis Flow
+    U->>C: Enter headline
+    C->>S: POST /api/sentiment
+    S->>D: Analyze sentiment
+    D-->>S: Analysis result
+    S->>DB: Save analysis
+    S-->>C: Return result
+    C-->>U: Display card
+
+    Note over U,F: Stock Fundamentals Flow
+    U->>C: Click "Show Metrics"
+    C->>S: GET /api/stocks/fundamentals/:symbol
+    S->>F: Fetch metrics
+    F-->>S: P/E, EPS, etc.
+    S-->>C: Return fundamentals
+    C-->>U: Display inline
+```
+
+### Component Architecture
+
+```mermaid
+flowchart LR
+    subgraph Frontend
+        App[App.tsx]
+        App --> Chat[chat.tsx]
+        Chat --> CP[ChatPanel]
+        Chat --> GP[GeniePanel]
+        Chat --> NF[NewsFeed]
+
+        CP --> Msg[Messages]
+        CP --> Input[MultimodalInput]
+
+        NF --> NC[NewsCard]
+        NF --> SD[SentimentDashboard]
+        NF --> MI[MarketIndices]
+
+        NC --> Fund[Fundamentals Display]
+    end
+
+    subgraph Backend
+        Index[index.ts]
+        Index --> ChatR[/api/chat]
+        Index --> SentR[/api/sentiment]
+        Index --> StockR[/api/stocks]
+        Index --> GenieR[/api/genie]
+        Index --> NewsR[/api/news]
+    end
+
+    subgraph Packages
+        Core[core]
+        AuthPkg[auth]
+        DB[db]
+        AIProviders[ai-sdk-providers]
+    end
+
+    Frontend --> Backend
+    Backend --> Packages
+```
+
+---
+
+## Project Structure
+
+```
+equity-analyst-app/
+├── client/                          # React Frontend
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── chat-panel.tsx       # Resizable chat panel
+│   │   │   ├── genie-panel.tsx      # Resizable Genie panel
+│   │   │   ├── news-feed.tsx        # Main news analysis view
+│   │   │   ├── market-indices.tsx   # S&P, NASDAQ, DOW, VIX display
+│   │   │   ├── sentiment-dashboard.tsx
+│   │   │   └── ui/                  # Reusable UI components
+│   │   ├── contexts/
+│   │   │   └── ActiveTabContext.tsx # Panel state & widths
+│   │   ├── hooks/                   # Custom React hooks
+│   │   └── lib/                     # Utilities
+│   └── vite.config.ts
+│
+├── server/                          # Express Backend
+│   ├── src/
+│   │   ├── routes/
+│   │   │   ├── chat.ts              # Chat streaming endpoint
+│   │   │   ├── sentiment.ts         # News analysis endpoint
+│   │   │   ├── stocks.ts            # Quotes & fundamentals
+│   │   │   ├── genie.ts             # Genie analytics
+│   │   │   └── news.ts              # RSS feed proxy
+│   │   ├── middleware/
+│   │   │   └── auth.ts              # Databricks authentication
+│   │   └── index.ts                 # Server entry point
+│
+├── packages/                        # Shared Libraries
+│   ├── core/                        # Types, errors, schemas
+│   ├── auth/                        # Databricks auth utilities
+│   ├── db/                          # Drizzle ORM & migrations
+│   ├── ai-sdk-providers/            # Databricks AI SDK integration
+│   └── utils/                       # Shared utilities
+│
+├── scripts/                         # Automation Scripts
+│   ├── quickstart.sh                # Interactive setup wizard
+│   ├── start-app.sh                 # Local dev server
+│   └── cleanup-database.sh          # DB instance management
+│
+├── databricks.yml                   # Databricks Asset Bundle config
+├── app.yaml                         # Databricks App runtime config
+└── drizzle.config.ts               # Database ORM config
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+1. **Node.js 20+** - Required runtime
+2. **Databricks CLI** - For authentication and deployment
+3. **Databricks Workspace** - With Agent Serving endpoint access
+4. **Finnhub API Key** (Optional) - For live stock quotes
+
+### Quick Start
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/AnanyaDBJ/equity-analyst-app-agent.git
+cd equity-analyst-app-agent
+
+# 2. Run the interactive setup wizard
+./scripts/quickstart.sh
+
+# 3. Start the development server
+./scripts/start-app.sh
+```
+
+The quickstart script will:
+- Install all prerequisites (Node.js, Databricks CLI)
+- Configure Databricks authentication
+- Set up your serving endpoint
+- Optionally provision a Lakebase database
+- Create your `.env.local` configuration
+
+### Manual Setup
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Copy environment template
+cp .env.example .env.local
+
+# 3. Configure .env.local with your values:
+#    - DATABRICKS_CONFIG_PROFILE
+#    - DATABRICKS_SERVING_ENDPOINT
+#    - FINNHUB_API_KEY (optional)
+#    - Database settings (optional)
+
+# 4. Authenticate with Databricks
+databricks auth login --profile your-profile-name
+
+# 5. Start development server
+npm run dev
+```
+
+The app will be available at:
+- Frontend: http://localhost:3000
+- Backend: http://localhost:3001
+
+---
 
 ## Deployment
 
-This project includes a [Databricks Asset Bundle (DAB)](https://docs.databricks.com/aws/en/dev-tools/bundles/apps-tutorial) configuration that simplifies deployment by automatically creating and managing all required resources.
+### Deploy to Databricks Apps
 
-1. **Clone the repo**:
-   ```bash
-   git clone https://github.com/databricks/app-templates
-   cd e2e-chatbot-app-next
-   ```
-2. **Databricks authentication**: Ensure auth is configured as described in [Prerequisites](#prerequisites).
-3. **Specify serving endpoint and address TODOs in databricks.yml**: Address the TODOs in `databricks.yml`, setting the default value of `serving_endpoint_name` to the name of the custom code agent or Agent Bricks endpoint to chat with. The optional TODOs wil allow you to deploy a Lakebase database bound to your application, which will allow for chat history to be persisted.
+```bash
+# 1. Validate bundle configuration
+databricks bundle validate
 
-   **Tip:** To automatically configure and deploy with database support, run `./scripts/quickstart.sh` and select "Yes" when prompted about enabling persistent chat history. See [Database Configuration](#database-modes) for details.
+# 2. Deploy resources
+databricks bundle deploy
 
-   - NOTE: if using [Agent Bricks Multi-Agent Supervisor](https://docs.databricks.com/aws/en/generative-ai/agent-bricks/multi-agent-supervisor), you need to additionally grant the app service principal the `CAN_QUERY` permission on the underlying agent(s) that the MAS orchestrates. You can do this by adding those
-     agent serving endpoints as resources in `databricks.yml` (see the NOTE in `databricks.yml` on this)
-4. **Validate the bundle configuration**:
+# 3. Start the application
+databricks bundle run databricks_chatbot
 
-   ```bash
-   databricks bundle validate
-   ```
-
-5. **Deploy the bundle**. The first deployment may take several minutes for provisioning resources (especially if database is enabled), but subsequent deployments are fast:
-
-   ```bash
-   databricks bundle deploy
-   ```
-
-   This creates:
-
-   - **App resource** ready to start
-   - **Lakebase database instance** (only if database resource is uncommented)
-
-6. **Start the app**:
-
-   ```bash
-   databricks bundle run databricks_chatbot
-   ```
-
-7. **View deployment summary** (useful for debugging deployment issues):
-   ```bash
-   databricks bundle summary
-   ```
+# 4. View deployment status
+databricks bundle summary
+```
 
 ### Deployment Targets
 
-The bundle supports multiple environments:
+| Target | Description | Command |
+|--------|-------------|---------|
+| dev | Development (default) | `databricks bundle deploy` |
+| staging | Staging environment | `databricks bundle deploy -t staging` |
+| prod | Production | `databricks bundle deploy -t prod` |
 
-- **dev** (default): Development environment
-- **staging**: Staging environment for testing
-- **prod**: Production environment
+### Enable Database (Persistent Chat History)
 
-To deploy to a specific target:
+To enable persistent storage, uncomment both database sections in `databricks.yml`:
 
-```bash
-databricks bundle deploy -t staging --var serving_endpoint_name="your-endpoint"
+1. **Database Instance** (~line 18):
+```yaml
+resources:
+  database_instances:
+    chatbot_lakebase:
+      name: ${var.database_instance_name}-${var.resource_name_suffix}
+      capacity: CU_1
 ```
 
-## Running Locally
-
-### Quick Start (Recommended)
-
-Use our automated quickstart script for the fastest setup experience:
-
-1. **Clone the repository**:
-
-   ```bash
-   git clone https://github.com/databricks/app-templates
-   cd e2e-chatbot-app-next
-   ```
-
-2. **Run the quickstart script**:
-
-   ```bash
-   ./scripts/quickstart.sh
-   ```
-
-   The quickstart script will:
-   - **Install prerequisites** - Automatically installs jq, nvm, Node.js 20, and Databricks CLI
-   - **Configure authentication** - Helps you select or create a Databricks CLI profile
-   - **Set up serving endpoint** - Prompts for your endpoint name and validates it exists
-   - **Database setup (optional)** - Choose persistent chat history or ephemeral mode
-   - **Deploy to Databricks (optional)** - Optionally deploys resources and provisions database
-   - **Configure local environment** - Automatically creates and populates .env.local
-   - **Run migrations** - Sets up database schema if database is enabled
-
-   The script handles the entire setup process automatically, including waiting for database provisioning and configuring connection details.
-
-3. **Start the application**:
-
-   Use the convenience script:
-   ```bash
-   ./scripts/start-app.sh
-   ```
-
-   Or manually:
-   ```bash
-   npm install  # Install/update dependencies
-   npm run dev  # Start development server
-   ```
-
-   The app starts on [localhost:3000](http://localhost:3000) (frontend) and [localhost:3001](http://localhost:3001) (backend)
-
-   **Tip:** The `start-app.sh` script is useful for quickly starting the app after initial setup, as it ensures dependencies are up-to-date before starting the dev server.
-
-### Manual Setup (Alternative)
-
-If you prefer to configure the environment manually:
-
-1. **Clone and install**:
-
-   ```bash
-   git clone https://github.com/databricks/app-templates
-   cd e2e-chatbot-app-next
-   npm install
-   ```
-
-2. **Set up environment variables**:
-
-   ```bash
-   cp .env.example .env.local
-   ```
-
-   Address the TODOs in `.env.local`, specifying your Databricks CLI profile and database connection details.
-
-3. **Run the application**:
-
-   ```bash
-   npm run dev
-   ```
-
-   The app starts on [localhost:3000](http://localhost:3000)
-
-### Database Modes
-
-The application supports two operating modes:
-
-#### Persistent Mode (with Database)
-
-This is the default mode when database environment variables are configured. In this mode:
-
-- Chat conversations are saved to Postgres/Lakebase
-- Users can access their chat history via the sidebar
-- Conversations persist across sessions
-- A database connection is required (POSTGRES_URL or PGDATABASE env vars)
-
-#### Ephemeral Mode (without Database)
-
-The application can also run without a database. In this mode:
-
-- Chat conversations work normally but are **not saved**
-- The sidebar shows "No chat history available"
-- A small "Ephemeral" indicator appears in the header
-- Users can still have conversations with the AI, but history is lost on page refresh
-
-#### Selecting a Database Mode
-
-The application will default to "Ephemeral mode" when no database environment variables are set.
-To run in persistent mode, ensure your environment contains the following database variables:
-
-```bash
-# Useful for local development
-POSTGRES_URL=...
-
-# OR
-
-# Handled for you when using Databricks Apps
-PGUSER=...
-PGPASSWORD=...
-PGDATABASE=...
-PGHOST=...
+2. **Database Resource Binding** (~line 41):
+```yaml
+- name: database
+  database:
+    database_name: databricks_postgres
+    instance_name: ${resources.database_instances.chatbot_lakebase.name}
+    permission: CAN_CONNECT_AND_CREATE
 ```
 
-The app will detect the absence or precense of database configuration and automatically run in the correct mode.
+---
 
-#### Enabling Database After Installation
+## Codebase Guide
 
-If you initially installed the template without database support (ephemeral mode) and want to add persistent chat history later, you can re-run the quickstart script:
+### Key Workflows
 
-```bash
-./scripts/quickstart.sh
+#### 1. News Sentiment Analysis
+
+```
+User enters headline → POST /api/sentiment → Databricks Agent analyzes
+→ Returns: company, sentiment (bullish/bearish/neutral), confidence, rationale
+→ Saved to database → Displayed as NewsCard
 ```
 
-When prompted about enabling persistent chat history, select "Yes". The script will:
-- Uncomment the required database sections in `databricks.yml`
-- Optionally deploy the Lakebase database instance
-- Configure your `.env.local` file with database connection details
-- Run database migrations if the database is provisioned
-- Set up your local environment with the correct database settings
+**Key Files:**
+- `client/src/components/news-feed.tsx` - UI and state management
+- `server/src/routes/sentiment.ts` - API endpoint
+- `packages/db/src/queries.ts` - Database operations
 
-The script handles all configuration automatically, including:
-- Detecting your Databricks workspace and authentication
-- Calculating the correct database instance name for your target environment
-- Retrieving the database host (PGHOST) after provisioning
-- Updating environment variables with the correct values
+#### 2. Chat Streaming
 
-**Manual Steps (Alternative):**
+```
+User sends message → POST /api/chat → Vercel AI SDK streams response
+→ Server-Sent Events (SSE) → Real-time display → Save to database
+```
 
-If you prefer to enable the database manually:
+**Key Files:**
+- `client/src/components/chat-panel.tsx` - Chat UI
+- `server/src/routes/chat.ts` - Streaming endpoint
+- `packages/ai-sdk-providers/` - Databricks provider
 
-1. **Edit `databricks.yml`** - Uncomment both database sections:
-   - Database instance resource (`chatbot_lakebase`) around line 18
-   - Database resource binding (`- name: database`) around line 41
+#### 3. Stock Fundamentals (On-Demand)
 
-2. **Deploy the database**:
-   ```bash
-   databricks bundle deploy
-   ```
-   (First deployment takes several minutes for provisioning)
+```
+User clicks "Show Metrics" → GET /api/stocks/fundamentals/:symbol
+→ Finnhub API (cached 5 min) → Display P/E, EPS, Market Cap, etc.
+```
 
-3. **Configure `.env.local`** with database variables:
-   ```bash
-   PGUSER=your-databricks-username
-   PGHOST=your-postgres-host  # Get with: ./scripts/get-pghost.sh
-   PGDATABASE=databricks_postgres
-   PGPORT=5432
-   ```
+**Key Files:**
+- `client/src/components/news-feed.tsx` - NewsCard with metrics button
+- `server/src/routes/stocks.ts` - Fundamentals endpoint
 
-4. **Run database migrations**:
-   ```bash
-   npm run db:migrate
-   ```
+### Adding New Features
+
+#### Add a New API Endpoint
+
+```typescript
+// server/src/routes/my-feature.ts
+import { Router } from 'express';
+import { authMiddleware } from '../middleware/auth';
+
+export const myFeatureRouter = Router();
+myFeatureRouter.use(authMiddleware);
+
+myFeatureRouter.get('/endpoint', async (req, res) => {
+  // Implementation
+  res.json({ data: 'result' });
+});
+
+// Register in server/src/index.ts
+app.use('/api/my-feature', myFeatureRouter);
+```
+
+#### Add a New Database Table
+
+```typescript
+// 1. Add to packages/db/src/schema.ts
+export const myTable = aiChatbotSchema.table('my_table', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 256 }),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// 2. Generate migration
+npm run db:generate
+
+// 3. Apply migration
+npm run db:migrate
+```
+
+#### Add a New React Component
+
+```tsx
+// client/src/components/my-component.tsx
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+
+export function MyComponent() {
+  const [data, setData] = useState(null);
+
+  return (
+    <div className="p-4">
+      {/* Component content */}
+    </div>
+  );
+}
+```
+
+### State Management
+
+| Context | Purpose | Location |
+|---------|---------|----------|
+| `ActiveTabContext` | Panel open/close state, panel widths | `contexts/ActiveTabContext.tsx` |
+| `SessionContext` | User authentication state | `contexts/SessionContext.tsx` |
+| `AppConfigContext` | App configuration (chat history enabled, etc.) | `contexts/AppConfigContext.tsx` |
+
+### Database Operations
+
+```bash
+npm run db:generate   # Generate migrations from schema changes
+npm run db:migrate    # Apply pending migrations (production-safe)
+npm run db:studio     # Open visual database editor
+npm run db:reset      # Reset database (DESTRUCTIVE)
+```
+
+---
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABRICKS_CONFIG_PROFILE` | Yes | Databricks CLI profile name |
+| `DATABRICKS_SERVING_ENDPOINT` | Yes | Agent serving endpoint name |
+| `FINNHUB_API_KEY` | No | For live stock quotes |
+| `PGHOST` | No* | Lakebase database host |
+| `PGUSER` | No* | Database username |
+| `PGDATABASE` | No* | Database name (default: databricks_postgres) |
+
+*Required for persistent chat history
+
+---
 
 ## Testing
 
-The project uses Playwright for end-to-end testing and supports dual-mode testing to verify behavior in both persistent and ephemeral modes.
-
-### Test Modes
-
-Tests run in two separate modes to ensure both database and non-database functionality work correctly:
-
-#### With Database Mode
-
-- Uses database environment variables (either set in .env.local or declared elsewhere)
-- Includes full Postgres database
-- Tests chat history persistence, pagination, and deletion
-- Will throw a warning and stop if no database exists
-
-#### Ephemeral Mode
-
-- No database connection (all POSTGRES_URL and PG\* variables omitted)
-- Tests chat streaming without persistence
-- Ensures UI gracefully handles missing database
-
-### Running Tests
-
-**Run all tests (both modes sequentially)**:
-
 ```bash
+# Run all tests
 npm test
+
+# Run with UI
+npx playwright test --ui
+
+# Run specific test file
+npx playwright test tests/e2e/chat.test.ts
 ```
 
-This runs with-db tests first, then ephemeral tests. The server automatically restarts between modes with different configurations.
+---
 
-**Run specific mode**:
+## Common Commands
 
-```bash
-# Test with database only
-npm run test:with-db
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start dev server (frontend + backend) |
+| `npm run build` | Build for production |
+| `npm run lint` | Lint and fix code (Biome) |
+| `npm test` | Run Playwright tests |
+| `databricks bundle deploy` | Deploy to Databricks |
+| `databricks bundle run databricks_chatbot` | Start deployed app |
 
-# Test ephemeral mode only
-npm run test:ephemeral
-```
-
-### Continuous Integration
-
-The GitHub Actions workflow runs both test modes in separate jobs:
-
-- **test-with-db**: Includes Postgres service, runs migrations, executes with-db tests
-- **test-ephemeral**: No Postgres, no migrations, executes ephemeral tests
-
-Both jobs run in parallel for faster CI feedback.
-
-## Known limitations
-
-- No support for image or other multi-modal inputs
-- The most common and officially recommended authentication methods for Databricks are supported: Databricks CLI auth for local development, and Databricks service principal auth for deployed apps. Other authentication mechanisms (PAT, Azure MSI, etc) are not currently supported.
-- We create one database per app, because the app code targets a fixed `ai_chatbot` schema within the database instance. To host multiple apps out of the same instance, you can:
-  - Update the database instance name in `databricks.yml`
-  - Update references to `ai_chatbot` in the codebase to your new desired schema name within the existing database instance
-  - Run `npm run db:generate` to regenerate database migrations
-  - Deploy your app
+---
 
 ## Troubleshooting
 
-### "reference does not exist" errors when running databricks bundle CLI commands
+### "Checking endpoint availability..." stuck
+- Verify `DATABRICKS_SERVING_ENDPOINT` is set correctly
+- Check Databricks authentication: `databricks auth describe`
 
-If you get an error like the following (or other similar "reference does not exist" errors)
-while running `databricks bundle` commands, your Databricks CLI version may be out of date.
-Make sure to install the latest version of the Databricks CLI (per [Prerequisites](#prerequisites)) and try again.
+### Stock quotes not loading
+- Ensure `FINNHUB_API_KEY` is set in `.env.local`
+- Free tier: 60 API calls/minute limit
 
-```bash
-$ databricks bundle deploy
-Error: reference does not exist: ${workspace.current_user.domain_friendly_name}
+### Database connection errors
+- Run `./scripts/get-pghost.sh` to get correct PGHOST
+- Verify database is provisioned: `databricks bundle summary`
 
-Name: databricks-chatbot
-Target: dev
-Workspace:
-  User: user@company.com
-  Path: /Workspace/Users/user@company.com/.bundle/databricks-chatbot/dev
-```
+### "Resource not found" during deploy
+- Bundle state mismatch - run: `databricks bundle unbind <resource-name>`
 
-### "Resource not found" errors during databricks bundle deploy
+---
 
-Errors like the following one can occur when attempting to deploy the app if the state of your bundle does not match the state of resources
-deployed in your workspace:
+## License
 
-```bash
-$ databricks bundle deploy
-Uploading bundle files to /Workspace/Users/user@company.com/.bundle/databricks-chatbot/dev/files...
-Deploying resources...
-Error: terraform apply: exit status 1
+This project is for demonstration and educational purposes.
 
-Error: failed to update database_instance
+---
 
-  with databricks_database_instance.chatbot_lakebase,
-  on bundle.tf.json line 45, in resource.databricks_database_instance.chatbot_lakebase:
-  45:       }
-
-Resource not found
-
-
-Updating deployment state...
-```
-
-This can happen if resources deployed via your bundle were then manually deleted, or resources specified by your bundle
-were manually created without using the `databricks bundle` CLI. To resolve this class of issue, inspect the state of the actual deployed resources
-in your workspace and compare it to the bundle state using `databricks bundle summary`. If there is a mismatch,
-[see docs](https://docs.databricks.com/aws/en/dev-tools/bundles/faqs#can-i-port-existing-jobs-pipelines-dashboards-and-other-databricks-objects-into-my-bundle) on how to
-manually bind (if resources were manually created) or unbind (if resources were manually deleted) resources
-from your current bundle state. In the above example, the `chatbot_lakebase` database instance resource
-was deployed via `databricks bundle deploy`, and then manually deleted. This broke subsequent deployments of the bundle
-(because bundle state indicated the resource should exist, but it did not in the workspace). Running `databricks bundle unbind chatbot_lakebase` updated bundle state to reflect the deletion of the instance,
-unblocking subsequent deployment of the bundle via `databricks bundle deploy`.
+<p align="center">
+  Built with Databricks | Powered by AI
+</p>
