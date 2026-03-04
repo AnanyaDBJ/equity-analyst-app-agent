@@ -534,9 +534,3 @@ npx playwright test tests/e2e/chat.test.ts
 ## License
 
 This project is for demonstration and educational purposes.
-
----
-
-<p align="center">
-  Built with Databricks | Powered by AI
-</p>
