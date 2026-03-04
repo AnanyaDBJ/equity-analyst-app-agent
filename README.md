@@ -50,6 +50,7 @@ This application integrates with **two Databricks Agent Serving endpoints**:
 ### High-Level System Architecture
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#4CAF50', 'primaryTextColor': '#fff', 'primaryBorderColor': '#388E3C', 'lineColor': '#666', 'secondaryColor': '#2196F3', 'tertiaryColor': '#FF9800', 'background': '#ffffff'}}}%%
 flowchart TB
     subgraph Client ["Frontend (React + Vite)"]
         UI[User Interface]
@@ -94,17 +95,24 @@ flowchart TB
     Auth --> ChatAgent
     Auth --> SentimentAgent
     API --> LB
+
+    style Client fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
+    style Server fill:#FFF3E0,stroke:#F57C00,stroke-width:2px
+    style Databricks fill:#FCE4EC,stroke:#C2185B,stroke-width:2px
+    style External fill:#E8F5E9,stroke:#388E3C,stroke-width:2px
+    style Storage fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px
 ```
 
 ### Request Flow Architecture
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#E3F2FD', 'primaryTextColor': '#1565C0', 'primaryBorderColor': '#1976D2', 'lineColor': '#666', 'noteBkgColor': '#FFF9C4', 'noteTextColor': '#333', 'actorBkg': '#4CAF50', 'actorTextColor': '#fff', 'actorBorder': '#388E3C', 'signalColor': '#1976D2', 'background': '#ffffff'}}}%%
 sequenceDiagram
     participant U as User
     participant C as React Client
     participant S as Express Server
-    participant CA as Chat Agent<br/>(Databricks)
-    participant SA as Sentiment Agent<br/>(Databricks)
+    participant CA as Chat Agent
+    participant SA as Sentiment Agent
     participant F as Finnhub API
     participant DB as Lakebase
 
@@ -121,16 +129,16 @@ sequenceDiagram
     U->>C: Enter headline
     C->>S: POST /api/sentiment
     S->>SA: Analyze sentiment
-    SA-->>S: {company, status, confidence, rationale}
+    SA-->>S: company, status, confidence
     S->>DB: Save analysis
     S-->>C: Return result
     C-->>U: Display NewsCard
 
     Note over U,F: Stock Fundamentals Flow (Finnhub API)
-    U->>C: Click "Show Metrics"
-    C->>S: GET /api/stocks/fundamentals/:symbol
+    U->>C: Click Show Metrics
+    C->>S: GET /api/stocks/fundamentals
     S->>F: Fetch metrics
-    F-->>S: P/E, EPS, Market Cap, etc.
+    F-->>S: P/E, EPS, Market Cap
     S-->>C: Return fundamentals
     C-->>U: Display inline
 ```
@@ -138,6 +146,7 @@ sequenceDiagram
 ### Component Architecture
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#4CAF50', 'primaryTextColor': '#fff', 'primaryBorderColor': '#388E3C', 'lineColor': '#666', 'background': '#ffffff'}}}%%
 flowchart LR
     subgraph Frontend
         App[App.tsx]
@@ -174,6 +183,10 @@ flowchart LR
 
     Frontend --> Backend
     Backend --> Packages
+
+    style Frontend fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
+    style Backend fill:#FFF3E0,stroke:#F57C00,stroke-width:2px
+    style Packages fill:#E8F5E9,stroke:#388E3C,stroke-width:2px
 ```
 
 ---
