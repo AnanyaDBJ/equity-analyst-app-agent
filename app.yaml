@@ -1,0 +1,12 @@
+command: ["npm", "run", "start"]
+runtime: nodejs20
+
+env:
+  - name: DATABRICKS_SERVING_ENDPOINT
+    valueFrom: serving-endpoint
+  - name: DATABRICKS_SENTIMENT_ENDPOINT
+    valueFrom: sentiment-endpoint
+  - name: DATABRICKS_SQL_WAREHOUSE_ID
+    valueFrom: sql-warehouse
+  - name: DATABRICKS_GENIE_ROOM_ID
+    value: "01f1124799d51f75a6e482cbc24ab299"

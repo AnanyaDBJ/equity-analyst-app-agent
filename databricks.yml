@@ -1,0 +1,105 @@
+bundle:
+  name: news-analyst-app
+
+# Exclude dev-only files from bundle upload.
+# NOTE: Databricks Apps runs `npm run build` during deployment,
+# so client/src/ and server/src/ MUST be included.
+sync:
+  exclude:
+    # Dependencies (installed fresh on Databricks via npm install)
+    - node_modules/
+    - "**/node_modules/"
+    # Dev/test files (not needed for build or runtime)
+    - tests/
+    - test-results/
+    - playwright-report/
+    - blob-report/
+    - coverage/
+    - scripts/
+    # IDE and tooling directories
+    - .git/
+    - .claude/
+    - .databricks/
+    - .turbo/
+    - .idea/
+    - .github/
+    - .vscode/
+    # Dev-only config files
+    - playwright.config.ts
+    - knip.json
+    - CLAUDE.md
+    - README.md
+    - .gitignore
+    # Stale artifacts
+    - "*.log"
+    - "*.pdf"
+    - ".env*"
+    - "**/*.map"
+    - "**/.DS_Store"
+
+variables:
+  serving_endpoint_name:
+    description: "Name of the model serving endpoint to be used by the app"
+    default: "databricks-claude-opus-4-6"
+  sentiment_endpoint_name:
+    description: "Name of the sentiment analysis endpoint for structured output"
+    default: "agents-news_sentiment_workflow_agent"
+  database_instance_name:
+    description: "Base name of the Lakebase database instance"
+    default: "chatbot-lakebase"
+  resource_name_suffix:
+    description: "Suffix for resource names (app/lakebase instance names etc). Helpful for avoiding name collisions if multiple users deploy this app to the same workspace"
+
+resources:
+  database_instances:
+    # TODO (optional): Uncomment the database resource below to deploy the app with a database
+    # chatbot_lakebase:
+    #   # NOTE: customize the Lakebase instance name here, if desired
+    #   name: ${var.database_instance_name}-${var.resource_name_suffix}
+    #   capacity: CU_1
+
+  apps:
+    databricks_chatbot:
+      # NOTE: customize the app name here, if desired
+      name: db-chatbot-${var.resource_name_suffix}
+      description: "Agentic Chat application for Foundation Models, Agent Bricks, and custom code agents"
+      source_code_path: .
+      resources:
+      - name: serving-endpoint
+        description: "Databricks serving endpoint name for the AI agent"
+        serving_endpoint:
+          name: ${var.serving_endpoint_name}
+          permission: CAN_QUERY
+      - name: sentiment-endpoint
+        description: "Sentiment analysis endpoint for structured news output"
+        serving_endpoint:
+          name: ${var.sentiment_endpoint_name}
+          permission: CAN_QUERY
+      - name: database
+        description: "Lakebase database instance for the chat app"
+        database:
+          database_name: databricks_postgres
+          instance_name: news-analyst-agent-prod-db
+          permission: CAN_CONNECT_AND_CREATE
+      - name: sql-warehouse
+        description: "SQL warehouse for querying Delta tables"
+        sql_warehouse:
+          id: 148ccb90800933a1
+          permission: CAN_USE
+
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      resource_name_suffix: dev-v2
+
+  staging:
+    mode: production
+    variables:
+      resource_name_suffix: "staging"
+
+  prod:
+    mode: production
+    variables:
+      resource_name_suffix: "prod"
