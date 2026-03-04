@@ -158,11 +158,11 @@ flowchart LR
 
     subgraph Backend
         Index[index.ts]
-        Index --> ChatR[/api/chat]
-        Index --> SentR[/api/sentiment]
-        Index --> StockR[/api/stocks]
-        Index --> GenieR[/api/genie]
-        Index --> NewsR[/api/news]
+        Index --> ChatR["chat routes"]
+        Index --> SentR["sentiment routes"]
+        Index --> StockR["stocks routes"]
+        Index --> GenieR["genie routes"]
+        Index --> NewsR["news routes"]
     end
 
     subgraph Packages
