@@ -1,4 +1,4 @@
-# Databricks E2E Chatbot Application - Context for Claude
+# Equity Analyst App - Context for Claude
 
 ## Project Overview
 
