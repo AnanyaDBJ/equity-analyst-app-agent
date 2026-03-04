@@ -24,15 +24,24 @@ The Equity Analyst App is a full-stack application that provides AI-powered equi
 
 ## Features
 
-- **News Sentiment Analysis**: AI-powered analysis of financial news headlines with bullish/bearish/neutral classification
+- **News Sentiment Analysis**: AI-powered analysis of financial news headlines using a **Databricks Sentiment Agent endpoint** with bullish/bearish/neutral classification
 - **Real-time Market Indices**: Live tracking of S&P 500, NASDAQ, DOW, and VIX
 - **Stock Fundamentals On-Demand**: P/E ratio, EPS, market cap, revenue, and earnings data
 - **Resizable Panels**: Customizable workspace with draggable Chat and Genie panels
-- **Conversational AI**: Chat interface powered by Databricks Agent Serving
-- **Genie Analytics**: Natural language queries for equity research intelligence
+- **Conversational AI**: Chat interface powered by **Databricks Agent Serving endpoint**
+- **Genie Analytics**: Natural language queries via **Databricks Genie** for equity research intelligence
 - **Sector Impact Analysis**: Aggregated sentiment across market sectors
 - **TradingView Integration**: Interactive stock charts
 - **Persistent Chat History**: Optional database-backed conversation storage
+
+### Databricks Agent Endpoints
+
+This application integrates with **two Databricks Agent Serving endpoints**:
+
+| Endpoint | Purpose | Environment Variable |
+|----------|---------|---------------------|
+| **Chat Agent** | Conversational AI for equity research Q&A | `DATABRICKS_SERVING_ENDPOINT` |
+| **Sentiment Agent** | News headline sentiment analysis (bullish/bearish/neutral) | `DATABRICKS_SENTIMENT_ENDPOINT` |
 
 ---
 
@@ -54,11 +63,16 @@ flowchart TB
         API[REST API Routes]
         Auth[Auth Middleware]
         Stream[Stream Handler]
+        SentAPI[Sentiment API]
+    end
+
+    subgraph Databricks ["Databricks Platform"]
+        ChatAgent[Chat Agent Endpoint]
+        SentimentAgent[Sentiment Agent Endpoint]
+        GenieAPI[Genie API]
     end
 
     subgraph External ["External Services"]
-        DBS[Databricks Agent Serving]
-        DBG[Databricks Genie]
         FH[Finnhub API]
         RSS[RSS News Feeds]
     end
@@ -69,13 +83,16 @@ flowchart TB
 
     UI --> API
     Chat --> Stream
-    Genie --> DBG
+    Genie --> GenieAPI
+    News --> SentAPI
     News --> FH
     News --> RSS
 
     API --> Auth
-    Auth --> DBS
-    Stream --> DBS
+    Stream --> ChatAgent
+    SentAPI --> SentimentAgent
+    Auth --> ChatAgent
+    Auth --> SentimentAgent
     API --> LB
 ```
 
@@ -86,33 +103,34 @@ sequenceDiagram
     participant U as User
     participant C as React Client
     participant S as Express Server
-    participant D as Databricks Agent
+    participant CA as Chat Agent<br/>(Databricks)
+    participant SA as Sentiment Agent<br/>(Databricks)
     participant F as Finnhub API
     participant DB as Lakebase
 
-    Note over U,DB: Chat Flow
+    Note over U,DB: Chat Flow (Chat Agent Endpoint)
     U->>C: Send message
     C->>S: POST /api/chat
-    S->>D: Stream request
-    D-->>S: SSE stream
+    S->>CA: Stream request
+    CA-->>S: SSE stream
     S-->>C: Forward stream
     C-->>U: Display response
     S->>DB: Save message
 
-    Note over U,F: Sentiment Analysis Flow
+    Note over U,DB: Sentiment Analysis Flow (Sentiment Agent Endpoint)
     U->>C: Enter headline
     C->>S: POST /api/sentiment
-    S->>D: Analyze sentiment
-    D-->>S: Analysis result
+    S->>SA: Analyze sentiment
+    SA-->>S: {company, status, confidence, rationale}
     S->>DB: Save analysis
     S-->>C: Return result
-    C-->>U: Display card
+    C-->>U: Display NewsCard
 
-    Note over U,F: Stock Fundamentals Flow
+    Note over U,F: Stock Fundamentals Flow (Finnhub API)
     U->>C: Click "Show Metrics"
     C->>S: GET /api/stocks/fundamentals/:symbol
     S->>F: Fetch metrics
-    F-->>S: P/E, EPS, etc.
+    F-->>S: P/E, EPS, Market Cap, etc.
     S-->>C: Return fundamentals
     C-->>U: Display inline
 ```
@@ -322,13 +340,18 @@ resources:
 
 ### Key Workflows
 
-#### 1. News Sentiment Analysis
+#### 1. News Sentiment Analysis (Databricks Sentiment Agent)
 
 ```
-User enters headline → POST /api/sentiment → Databricks Agent analyzes
+User enters headline → POST /api/sentiment → Databricks Sentiment Agent endpoint
 → Returns: company, sentiment (bullish/bearish/neutral), confidence, rationale
 → Saved to database → Displayed as NewsCard
 ```
+
+The Sentiment Agent is a specialized Databricks Agent Serving endpoint trained to:
+- Extract company/ticker from headlines
+- Classify sentiment as bullish, bearish, or neutral
+- Provide confidence score and rationale
 
 **Key Files:**
 - `client/src/components/news-feed.tsx` - UI and state management
@@ -438,13 +461,26 @@ npm run db:reset      # Reset database (DESTRUCTIVE)
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `DATABRICKS_CONFIG_PROFILE` | Yes | Databricks CLI profile name |
-| `DATABRICKS_SERVING_ENDPOINT` | Yes | Agent serving endpoint name |
-| `FINNHUB_API_KEY` | No | For live stock quotes |
+| `DATABRICKS_SERVING_ENDPOINT` | Yes | Chat Agent endpoint name (conversational AI) |
+| `DATABRICKS_SENTIMENT_ENDPOINT` | Yes | Sentiment Agent endpoint name (news analysis) |
+| `FINNHUB_API_KEY` | No | For live stock quotes and fundamentals |
 | `PGHOST` | No* | Lakebase database host |
 | `PGUSER` | No* | Database username |
 | `PGDATABASE` | No* | Database name (default: databricks_postgres) |
 
 *Required for persistent chat history
+
+### Agent Endpoints Configuration
+
+Both agent endpoints must be deployed in your Databricks workspace:
+
+```bash
+# Chat Agent - handles conversational queries
+DATABRICKS_SERVING_ENDPOINT=your-chat-agent-endpoint
+
+# Sentiment Agent - analyzes news headlines
+DATABRICKS_SENTIMENT_ENDPOINT=your-sentiment-agent-endpoint
+```
 
 ---
 
