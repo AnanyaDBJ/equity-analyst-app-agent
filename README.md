@@ -50,9 +50,9 @@ This application integrates with **two Databricks Agent Serving endpoints**:
 ### High-Level System Architecture
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#4CAF50', 'primaryTextColor': '#fff', 'primaryBorderColor': '#388E3C', 'lineColor': '#666', 'secondaryColor': '#2196F3', 'tertiaryColor': '#FF9800', 'background': '#ffffff'}}}%%
+%%{init: {'theme': 'neutral'}}%%
 flowchart TB
-    subgraph Client ["Frontend (React + Vite)"]
+    subgraph Client ["🖥️ Frontend - React + Vite"]
         UI[User Interface]
         Chat[Chat Panel]
         Genie[Genie Panel]
@@ -60,25 +60,25 @@ flowchart TB
         Charts[TradingView Charts]
     end
 
-    subgraph Server ["Backend (Express.js)"]
+    subgraph Server ["⚙️ Backend - Express.js"]
         API[REST API Routes]
         Auth[Auth Middleware]
         Stream[Stream Handler]
         SentAPI[Sentiment API]
     end
 
-    subgraph Databricks ["Databricks Platform"]
+    subgraph Databricks ["🔷 Databricks Platform"]
         ChatAgent[Chat Agent Endpoint]
         SentimentAgent[Sentiment Agent Endpoint]
         GenieAPI[Genie API]
     end
 
-    subgraph External ["External Services"]
+    subgraph External ["🌐 External Services"]
         FH[Finnhub API]
         RSS[RSS News Feeds]
     end
 
-    subgraph Storage ["Data Layer"]
+    subgraph Storage ["💾 Data Layer"]
         LB[(Lakebase PostgreSQL)]
     end
 
@@ -95,28 +95,22 @@ flowchart TB
     Auth --> ChatAgent
     Auth --> SentimentAgent
     API --> LB
-
-    style Client fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
-    style Server fill:#FFF3E0,stroke:#F57C00,stroke-width:2px
-    style Databricks fill:#FCE4EC,stroke:#C2185B,stroke-width:2px
-    style External fill:#E8F5E9,stroke:#388E3C,stroke-width:2px
-    style Storage fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px
 ```
 
 ### Request Flow Architecture
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#E3F2FD', 'primaryTextColor': '#1565C0', 'primaryBorderColor': '#1976D2', 'lineColor': '#666', 'noteBkgColor': '#FFF9C4', 'noteTextColor': '#333', 'actorBkg': '#4CAF50', 'actorTextColor': '#fff', 'actorBorder': '#388E3C', 'signalColor': '#1976D2', 'background': '#ffffff'}}}%%
+%%{init: {'theme': 'neutral'}}%%
 sequenceDiagram
-    participant U as User
-    participant C as React Client
-    participant S as Express Server
-    participant CA as Chat Agent
-    participant SA as Sentiment Agent
-    participant F as Finnhub API
-    participant DB as Lakebase
+    participant U as 👤 User
+    participant C as 🖥️ React Client
+    participant S as ⚙️ Express Server
+    participant CA as 🤖 Chat Agent
+    participant SA as 📊 Sentiment Agent
+    participant F as 📈 Finnhub API
+    participant DB as 💾 Lakebase
 
-    Note over U,DB: Chat Flow (Chat Agent Endpoint)
+    Note over U,DB: 💬 Chat Flow
     U->>C: Send message
     C->>S: POST /api/chat
     S->>CA: Stream request
@@ -125,7 +119,7 @@ sequenceDiagram
     C-->>U: Display response
     S->>DB: Save message
 
-    Note over U,DB: Sentiment Analysis Flow (Sentiment Agent Endpoint)
+    Note over U,DB: 📰 Sentiment Analysis Flow
     U->>C: Enter headline
     C->>S: POST /api/sentiment
     S->>SA: Analyze sentiment
@@ -134,7 +128,7 @@ sequenceDiagram
     S-->>C: Return result
     C-->>U: Display NewsCard
 
-    Note over U,F: Stock Fundamentals Flow (Finnhub API)
+    Note over U,F: 💹 Stock Fundamentals Flow
     U->>C: Click Show Metrics
     C->>S: GET /api/stocks/fundamentals
     S->>F: Fetch metrics
@@ -146,9 +140,9 @@ sequenceDiagram
 ### Component Architecture
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#4CAF50', 'primaryTextColor': '#fff', 'primaryBorderColor': '#388E3C', 'lineColor': '#666', 'background': '#ffffff'}}}%%
+%%{init: {'theme': 'neutral'}}%%
 flowchart LR
-    subgraph Frontend
+    subgraph Frontend ["🖥️ Frontend"]
         App[App.tsx]
         App --> Chat[chat.tsx]
         Chat --> CP[ChatPanel]
@@ -162,10 +156,10 @@ flowchart LR
         NF --> SD[SentimentDashboard]
         NF --> MI[MarketIndices]
 
-        NC --> Fund[Fundamentals Display]
+        NC --> Fund[Fundamentals]
     end
 
-    subgraph Backend
+    subgraph Backend ["⚙️ Backend"]
         Index[index.ts]
         Index --> ChatR["chat routes"]
         Index --> SentR["sentiment routes"]
@@ -174,7 +168,7 @@ flowchart LR
         Index --> NewsR["news routes"]
     end
 
-    subgraph Packages
+    subgraph Packages ["📦 Packages"]
         Core[core]
         AuthPkg[auth]
         DB[db]
@@ -183,10 +177,6 @@ flowchart LR
 
     Frontend --> Backend
     Backend --> Packages
-
-    style Frontend fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
-    style Backend fill:#FFF3E0,stroke:#F57C00,stroke-width:2px
-    style Packages fill:#E8F5E9,stroke:#388E3C,stroke-width:2px
 ```
 
 ---
